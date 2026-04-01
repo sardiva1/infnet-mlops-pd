@@ -1,0 +1,118 @@
+# quality.yaml — Configuração de Qualidade de Dados via Great Expectations
+#
+# Este arquivo define TODAS as regras de qualidade. O código (src/quality.py)
+# é genérico: ele lê este YAML e executa as verificações dinamicamente.
+#
+# Princípio MLOps: separar política (YAML) de mecanismo (código).
+# Para alterar um critério basta editar este arquivo — sem tocar no código.
+#
+# Tipos de expectation usam snake_case (padrão GE).
+# kwargs seguem a assinatura exata de cada classe GE.
+quality:
+  suite_name: "gaming_and_mental_health_quality_suite"
+  # fail_pipeline_on_error: true → lança RuntimeError se qualquer check falhar
+  # Use true em produção, false durante exploração / desenvolvimento
+  fail_pipeline_on_error: false
+  output_dir: "outputs/quality"        # relatório JSON salvo aqui
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Expectations de TABELA (sem coluna específica)
+# Validam propriedades globais do dataset
+# ─────────────────────────────────────────────────────────────────────────────
+table_expectations:
+
+  # O dataset Gaming and Mental Health deve ter entre 500 e 1.500 linhas
+  - type: expect_table_row_count_to_be_between
+    kwargs:
+      min_value: 500
+      max_value: 1500
+
+  # Garante que o schema não mudou — nenhuma coluna foi adicionada ou removida
+  - type: expect_table_columns_to_match_set
+    kwargs:
+      column_set:
+      - "withdrawal_symptoms"
+      - "continued_despite_problems"
+      - "loss_of_other_interests"
+      - "daily_gaming_hours"
+      - "monthly_game_spending_usd"
+      - "gaming_addiction_risk_level"
+      exact_match: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Expectations de COLUNA
+# Cada chave é o nome de uma coluna; o valor é uma lista de checks.
+# Ordem importa: checks mais baratos (null) devem vir antes de range checks.
+# ─────────────────────────────────────────────────────────────────────────────
+column_expectations:
+
+  # ── Variável alvo ──────────────────────────────────────────────────────────
+  gaming_addiction_risk_level:
+    - type: expect_column_values_to_not_be_null
+    # Conjunto fechado: qualquer valor fora desta lista é uma anomalia
+    - type: expect_column_values_to_be_in_set
+      kwargs:
+        value_set:
+          - "Low"
+          - "Moderate"
+          - "High"
+          - "Severe"
+
+  # ── Features numéricas contínuas ───────────────────────────────────────────
+  median_income:
+    - type: expect_column_values_to_not_be_null
+    - type: expect_column_values_to_be_between
+      kwargs:
+        min_value: 0.0
+        max_value: 20.0        # renda em unidades de $10k; valores acima de 15 são raros
+
+  housing_median_age:
+    - type: expect_column_values_to_not_be_null
+    - type: expect_column_values_to_be_between
+      kwargs:
+        min_value: 1
+        max_value: 55          # máximo histórico = 52 anos + margem
+
+  total_rooms:
+    - type: expect_column_values_to_not_be_null
+    - type: expect_column_values_to_be_between
+      kwargs:
+        min_value: 1
+        max_value: null        # sem teto definido — outliers serão sinalizados via mean
+
+  # ── Coluna com nulos conhecidos ────────────────────────────────────────────
+  total_bedrooms:
+    # ~1% dos registros têm bedrooms ausentes — isso é esperado no dataset original
+    # mostly: 0.98 → toleramos até 2% de nulos (margem sobre o ~1% histórico)
+    - type: expect_column_values_to_not_be_null
+      kwargs:
+        mostly: 0.98
+
+  population:
+    - type: expect_column_values_to_not_be_null
+    - type: expect_column_values_to_be_between
+      kwargs:
+        min_value: 1
+        max_value: null
+
+  households:
+    - type: expect_column_values_to_not_be_null
+    - type: expect_column_values_to_be_between
+      kwargs:
+        min_value: 1
+        max_value: null
+
+
+
+  # ── Variável categórica ────────────────────────────────────────────────────
+  ocean_proximity:
+    - type: expect_column_values_to_not_be_null
+    # Conjunto fechado: qualquer valor fora desta lista é uma anomalia
+    - type: expect_column_values_to_be_in_set
+      kwargs:
+        value_set:
+          - "NEAR BAY"
+          - "<1H OCEAN"
+          - "INLAND"
+          - "NEAR OCEAN"
+          - "ISLAND"
