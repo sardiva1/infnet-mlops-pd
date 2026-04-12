@@ -2,20 +2,22 @@
 # Controls execution behavior, output paths, and logging
 
 pipeline:
-  name: "gaming-and-mental-health-data-pipeline"
+  name: "car-price-data-pipeline"
   version: "1.0.0"
-  description: "Pipeline de ingestão dos dados de gaming e saúde mental (Gaming and Mental Health — Kaggle)"
+  description: "Pipeline de ingestão dos dados de preços de veículos (Car Price — Kaggle)"
 
 paths:
   raw_data_dir: "data/raw"
   processed_data_dir: "data/processed"
-  output_filename: "gaming_and_mental_health.parquet"
+  output_filename: "car_price.parquet"
+  features_data_dir: "data/features"
+  features_filename: "car_price_features.parquet"
 
 execution:
   skip_download_if_exists: true
   skip_ingest_if_exists: true
-  force_redownload: false
-  force_ingest: false
+  force_redownload: true
+  force_ingest: true
 
 logging:
   level: "INFO"                    # DEBUG | INFO | WARNING | ERROR

@@ -2,9 +2,9 @@
 # Controls Kaggle source, file discovery, ingestion behavior, and schema
 
 kaggle:
-  dataset: "shaistashahid/gaming-and-mental-health"
+  dataset: "ihasan88/car-price-prediction-and-vehicle-specifications"
   file_pattern: "*.csv"
-  expected_files: []
+  expected_files: [car_price_dataset.csv]
   expected_count: null
 
 ingest:
@@ -16,31 +16,15 @@ ingest:
 
 schema:
   # Required columns — pipeline fails loudly if any are missing post-ingest
-  # Column names from the shaistashahid/gaming-and-mental-health dataset (Gaming and Mental Health)
+  # Column names from the ihasan88/car-price-prediction-and-vehicle-specifications dataset (Car Price Prediction and Vehicle Specifications)
   required_columns:
-    - "age"
-    - "gender"
-    - "daily_gaming_hours"
-    - "game_genre"
-    - "primary_game"
-    - "gaming_platform"
-    - "sleep_hours"
-    - "sleep_quality"
-    - "sleep_disruption_frequency"
-    - "academic_work_performance"
-    - "grades_gpa"
-    - "work_productivity_score"
-    - "mood_state"
-    - "mood_swing_frequency"
-    - "withdrawal_symptoms"
-    - "loss_of_other_interests"
-    - "continued_despite_problems"
-    - "eye_strain"
-    - "back_neck_pain"
-    - "weight_change_kg"
-    - "exercise_hours_weekly"
-    - "social_isolation_score"
-    - "face_to_face_social_hours_weekly"
-    - "monthly_game_spending_usd"
-    - "years_gaming"
-    - "gaming_addiction_risk_level"
+    - "Brand"
+    - "Model_Year"
+    - "Engine_Size"
+    - "Fuel_Type"
+    - "Transmission"
+    - "Mileage"
+    - "Doors"
+    - "Owner_Count"
+    - "Horsepower"
+    - "Price"

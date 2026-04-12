@@ -1,0 +1,23 @@
+artifact_path: file:///C:/Users/Gui/Documents/INFNET/github/infnet-mlops-pd/mlruns/1/models/m-b3301db1cb7a44b8b44a6c53c4dd303f/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.11.8
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.8.0
+    skops_trusted_types: null
+mlflow_version: 3.11.1
+model_id: m-b3301db1cb7a44b8b44a6c53c4dd303f
+model_size_bytes: 1594
+model_uuid: m-b3301db1cb7a44b8b44a6c53c4dd303f
+prompts: null
+run_id: 4b783c48d5cd4da7800fd19faf46364f
+utc_time_created: '2026-04-12 20:37:36.290045'
