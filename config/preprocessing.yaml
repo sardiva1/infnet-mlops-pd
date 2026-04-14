@@ -26,6 +26,9 @@ categorical_encoding:
   - column: "Fuel_Type"
     one_hot_prefix: "fuel"             # → fuel_Gasoline, fuel_Diesel, etc.
     drop_first: false                  # mantém todas as categorias
+  - column: "Brand"
+    one_hot_prefix: "brand"            # → brand_Toyota, brand_Honda, etc.
+    drop_first: false                  # mantém todas as categorias  
 
 
 # ── 3. Features de Razão ──────────────────────────────────────────────────────
@@ -33,15 +36,9 @@ ratio_features:
   - name: "Miles_Per_Year"
     numerator: "Mileage"
     denominator: "Vehicle_Age"
-    groupBy: false # razão global, sem agrupar por Vehicle_Age
-  - name: "Brand_Avg_Price"
-    numerator: "Price"
-    denominator: "Brand"
-    groupBy: true  # indica que a mediana deve ser calculada por marca
   - name: "HP_per_Liter"
     numerator: "Horsepower"
     denominator: "Engine_Size"
-    groupBy: false # razão global, sem agrupar Engine_Size
 
 
 
@@ -61,6 +58,11 @@ feature_selection:
     - "fuel_Electric"
     - "fuel_Hybrid"
     - "fuel_Petrol"
+    - "brand_BMW"
+    - "brand_Ford"
+    - "brand_Honda"
+    - "brand_Hyundai"
+    - "brand_Tesla"
+    - "brand_Toyota"
     - "Miles_Per_Year"
-    - "Brand_Avg_Price"
     - "HP_per_Liter"

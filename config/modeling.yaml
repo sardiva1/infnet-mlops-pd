@@ -13,11 +13,10 @@
 pipeline:
   scaling:
     columns:
-      - "Miles_Per_Year"
       - "Engine_Size"
-      - "Doors"
-      - "Owner_Count"
       - "Horsepower"
+      - "Miles_Per_Year"
+      - "HP_per_Liter"
 
 # ── Redução de Features (via FeatureReducer — src/feature_reducer.py) ─────────
 #

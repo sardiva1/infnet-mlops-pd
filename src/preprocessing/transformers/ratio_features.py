@@ -39,15 +39,10 @@ class RatioFeatureTransformer(BaseFeatureTransformer):
     - Inf substituído por NaN.
 
     Config (preprocessing.yaml → ratio_features):
-        Exemplo 1 - Razão simples:
+        Exemplo 1:
         - name: "Miles_Per_Year"
           numerator: "Mileage"
           denominator: "Vehicle_Age"
-
-        Exemplo 2 - Razão com mediana agrupada:
-        - name: "Brand_Avg_Price"
-          numerator: "Price"
-          denominator_groupby: "Brand"
 
     Exemplo:
         transformer = RatioFeatureTransformer(ratios=config['ratio_features'], logger=logger)
@@ -84,37 +79,15 @@ class RatioFeatureTransformer(BaseFeatureTransformer):
                 )
                 continue
             
-            # Se denominator_groupby foi fornecido, usar a mediana agrupada
-            if groupBy:
-                if den not in X.columns:
-                    self._warn(
-                        "RatioFeatureTransformer: coluna de agrupamento '%s' ausente — '%s' ignorada.",
-                        den, name,
-                    )
-                    continue
                 
-                # Calcular mediana do denominador para cada grupo
-                den_mediana_por_grupo = X.groupby(den)[num].transform("mean")
-                
-                # Criar razão: numerador / mediana do denominador por grupo
-                X[name] = (X[num] / den_mediana_por_grupo.replace(0, np.nan)).replace(
-                    [np.inf, -np.inf], np.nan
-                )
-                
-                self._log(
-                    "RatioFeatureTransformer: criada '%s' = '%s' / median(groupby '%s')",
-                    name, num, den,
-                )
-            else:
-                # Caso simples: razão direta numerador / denominador
-                X[name] = (X[num] / X[den].replace(0, np.nan)).replace(
-                    [np.inf, -np.inf], np.nan
-                )
-                
-                self._log(
-                    "RatioFeatureTransformer: criada '%s' = '%s' / '%s'",
-                    name, num, den,
-                )
+            X[name] = (X[num] / X[den].replace(0, np.nan)).replace(
+                [np.inf, -np.inf], np.nan
+            )
+            
+            self._log(
+                "RatioFeatureTransformer: criada '%s' = '%s' / '%s'",
+                name, num, den,
+            )
             
             criadas.append(name)
 
