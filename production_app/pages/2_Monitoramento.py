@@ -178,7 +178,7 @@ def _plotar_serie_temporal(
 btn_executar = st.button(
     "▶️ Executar Análise de Monitoramento",
     type="primary",
-    use_container_width=True,
+    width='stretch',
 )
 
 if btn_executar:
@@ -302,7 +302,7 @@ if btn_executar:
         ax.yaxis.label.set_color("white")
         ax.legend(facecolor="#1a1a2e", labelcolor="white", fontsize=8)
 
-    st.pyplot(fig_ts, use_container_width=True)
+    st.pyplot(fig_ts, width='stretch')
     plt.close(fig_ts)
 
     # ═══════════════════════════════════════════════════════════════════════════
@@ -378,7 +378,7 @@ if btn_executar:
     ax_scatter.xaxis.set_major_formatter(mticker.FuncFormatter(_formatar_usd))
     ax_scatter.yaxis.set_major_formatter(mticker.FuncFormatter(_formatar_usd))
 
-    st.pyplot(fig_hist, use_container_width=True)
+    st.pyplot(fig_hist, width='stretch')
     plt.close(fig_hist)
 
     # ═══════════════════════════════════════════════════════════════════════════
@@ -391,4 +391,4 @@ if btn_executar:
         df_exibir["r2"]   = df_exibir["r2"].map("{:.4f}".format)
         df_exibir["mape"] = df_exibir["mape"].map("{:.2f}%".format)
         df_exibir.columns = ["RMSE", "MAE", "R²", "MAPE"]
-        st.dataframe(df_exibir, use_container_width=True)
+        st.dataframe(df_exibir, width='stretch')

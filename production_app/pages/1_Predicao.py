@@ -187,7 +187,7 @@ st.divider()
 btn_prever = st.button(
     "🔮 Calcular Preço do Veículo",
     type="primary",
-    use_container_width=True,
+    width='stretch',
 )
 
 if btn_prever:
@@ -311,6 +311,6 @@ if btn_prever:
             )
             st.dataframe(
                 features_df.T.rename(columns={0: "valor"}),
-                use_container_width=True,
+                width='stretch',
                 height=600,
             )
