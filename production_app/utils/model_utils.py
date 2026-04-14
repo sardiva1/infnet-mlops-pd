@@ -22,8 +22,8 @@ Responsabilidades:
    da versão mais recente do modelo registrado.
 
 5. calcular_intervalo_confianca(y_hat, cv_rmse_std, n_folds, z)
-   Calcula o intervalo de confiança de 95%:
-       IC = y_hat ± 1,96 × (cv_rmse_std / √n_folds)
+   Calcula o intervalo de confiança de 90%:
+       IC = y_hat ± 1,91 × (cv_rmse_std / √n_folds)
 
 Nomenclatura do modelo (modeling.yaml → modeling.registry_name):
    "car-pricing-best"
@@ -46,7 +46,7 @@ import pandas as pd
 
 _NOME_MODELO: str = "car-pricing-best"
 _N_FOLDS_CV: int  = 5      # modeling.yaml → cv.n_splits
-_Z_95: float      = 1.96   # z-score para IC de 95%
+_Z_90: float      = 1.91   # z-score para IC de 90%
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -209,10 +209,10 @@ def calcular_intervalo_confianca(
     y_hat: float,
     cv_rmse_std: float,
     n_folds: int = _N_FOLDS_CV,
-    z: float = _Z_95,
+    z: float = _Z_90,
 ) -> tuple[float, float]:
     """
-    Calcula o intervalo de confiança de 95% para uma predição.
+    Calcula o intervalo de confiança de 90% para uma predição.
 
     Fórmula:
          SE  = cv_rmse_std / √n_folds
@@ -231,7 +231,7 @@ def calcular_intervalo_confianca(
     n_folds : int
         Número de folds de CV usados no treino (padrão: 3, de modeling.yaml).
     z : float
-        z-score para o nível de confiança desejado (padrão: 1.96 → 95%).
+        z-score para o nível de confiança desejado (padrão: 1.91 → 90%).
 
     Retorna
     -------
@@ -277,9 +277,9 @@ def registrar_predicao(
     y_hat : float
         Predição pontual do modelo (valor do preço).
     intervalo_inferior : float, optional
-        Limite inferior do intervalo de confiança de 95%.
+        Limite inferior do intervalo de confiança de 90%.
     intervalo_superior : float, optional
-        Limite superior do intervalo de confiança de 95%.
+        Limite superior do intervalo de confiança de 90%.
     modelo_versao : str, optional
         Versão/ID do modelo registrado usado para predição.
 
@@ -324,14 +324,14 @@ def registrar_predicao(
 
         # Registrar intervalo de confiança (se disponível)
         if intervalo_inferior is not None:
-            mlflow.log_metric("ic_95_lower", intervalo_inferior)
+            mlflow.log_metric("ic_90_lower", intervalo_inferior)
         if intervalo_superior is not None:
-            mlflow.log_metric("ic_95_upper", intervalo_superior)
+            mlflow.log_metric("ic_90_upper", intervalo_superior)
 
         # Registrar amplitude do intervalo de confiança
         if intervalo_inferior is not None and intervalo_superior is not None:
             amplitude = intervalo_superior - intervalo_inferior
-            mlflow.log_metric("ic_95_amplitude", amplitude)
+            mlflow.log_metric("ic_90_amplitude", amplitude)
 
         # Registrar metadados
         mlflow.log_param("timestamp", datetime.now().isoformat())

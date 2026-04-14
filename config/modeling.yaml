@@ -16,7 +16,6 @@ pipeline:
       - "Engine_Size"
       - "Horsepower"
       - "Miles_Per_Year"
-      - "HP_per_Liter"
 
 # ── Redução de Features (via FeatureReducer — src/feature_reducer.py) ─────────
 #
@@ -38,7 +37,7 @@ feature_reduction:
   method: "none"                # padrão para baseline; Optuna sobrescreve se search_space.method configurado
 
   search_space:
-    method:
+    method: 
       type: "categorical"
       choices: ["none", "pca"]        # kpca excluído: O(n³) na kernel matrix, inviável em 16K amostras
 

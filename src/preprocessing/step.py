@@ -160,6 +160,7 @@ class PreprocessingStep(PipelineStep):
         """Loga um resumo das transformações configuradas."""
         self.logger.info("Transformações configuradas:")
         self.logger.info("  Idade do Carro      : %d", len(self._config.get("car_age", [])))
+        self.logger.info("  Features categóricas  : %d", len(self._config.get("categorical_encoding", [])))
         self.logger.info("  Features de razão   : %d", len(self._config.get("ratio_features", [])))
         self.logger.info(
             "  Features selecionadas: %d",

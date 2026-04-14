@@ -29,10 +29,6 @@ class RatioFeatureTransformer(BaseFeatureTransformer):
 
     1. Razão simples (denominador direto):
        feature = numerador / denominador
-       
-    2. Razão com mediana agrupada (quando denominator_groupby é fornecido):
-       mediana_por_grupo = median(denominador | groupby=campo_agrupamento)
-       feature = numerador / mediana_por_grupo
 
     Divisão segura:
     - Denominador zero → NaN (evita divisão por zero).
@@ -69,7 +65,6 @@ class RatioFeatureTransformer(BaseFeatureTransformer):
             name = spec["name"]
             num = spec["numerator"]
             den = spec["denominator"]
-            groupBy = spec["groupBy"]
 
             # Validar colunas necessárias
             if num not in X.columns or den not in X.columns:

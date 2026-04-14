@@ -7,7 +7,7 @@ Ao submeter:
      entradas brutas nas ~14 features engenheiradas que o modelo espera.
   2. O modelo é carregado diretamente do banco SQLite do MLflow (sem servidor REST).
   3. As métricas de IC (cv_rmse_std, holdout_rmse) são recuperadas via MlflowClient.
-  4. O IC de 95% é calculado como: y_hat ± 1,96 × (cv_rmse_std / √n_folds)
+  4. O IC de 90% é calculado como: y_hat ± 1,91 × (cv_rmse_std / √n_folds)
   5. Os resultados são exibidos com gauge visual e barra de intervalo.
 """
 from __future__ import annotations
@@ -275,7 +275,7 @@ if btn_prever:
                 from utils.model_utils import _N_FOLDS_CV
                 st.markdown(
                     f"""
-                    **Intervalo de Confiança de 95%:**
+                    **Intervalo de Confiança de 90%:**
                     &nbsp;&nbsp; ${inferior:,.0f} &nbsp; – &nbsp; ${superior:,.0f}
 
                     *EP = cv\\_rmse\\_std / √{_N_FOLDS_CV} =
@@ -293,8 +293,8 @@ if btn_prever:
 
         with col_res2:
             if ic_ok:
-                st.metric("Limite inferior (IC 95%)", f"${inferior:,.0f}")
-                st.metric("Limite superior (IC 95%)", f"${superior:,.0f}")
+                st.metric("Limite inferior (IC 90%)", f"${inferior:,.0f}")
+                st.metric("Limite superior (IC 90%)", f"${superior:,.0f}")
 
         with col_res3:
             if ic_ok:

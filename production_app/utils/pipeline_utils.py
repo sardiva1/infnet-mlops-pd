@@ -14,7 +14,7 @@ features_to_keep definidas em config/preprocessing.yaml, excluindo o target (Pri
 Ordem da cadeia (espelha preprocessamento.py):
     1. CarAgeTransformer         — Model_Year → Vehicle_Age
     2. CategoricalTransformer    — Transmission, Fuel_Type → one-hot encoding
-    3. RatioFeatureTransformer   — razões: Miles_Per_Year, HP_per_Liter
+    3. RatioFeatureTransformer   — razões: Miles_Per_Year
     4. FeatureSelector           — mantém apenas features_to_keep (sem target)
 
 NOTA: StandardScalerTransformer e FeatureReducer NÃO são aplicados aqui.
@@ -134,7 +134,7 @@ def preprocessar_entradas(raw: dict[str, Any]) -> pd.DataFrame:
     df = df.reindex(columns=_FEATURES_TO_KEEP, fill_value=0)
     
     # 6. Substituir NaN por valores padrão (evita erro de validação)
-    # NaN pode surgir de: HP_per_Liter com Engine_Size=0, Miles_Per_Year com Vehicle_Age=0, etc.
+    # NaN pode surgir de: Miles_Per_Year com Vehicle_Age=0
     for col in df.columns:
         if df[col].isna().any():
             # Usar mediana das colunas numéricas do dataset de treinamento como fallback

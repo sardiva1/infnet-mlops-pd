@@ -36,10 +36,6 @@ ratio_features:
   - name: "Miles_Per_Year"
     numerator: "Mileage"
     denominator: "Vehicle_Age"
-  - name: "HP_per_Liter"
-    numerator: "Horsepower"
-    denominator: "Engine_Size"
-
 
 
 # ── 4. Seleção de Features ────────────────────────────────────────────────────
@@ -65,4 +61,3 @@ feature_selection:
     - "brand_Tesla"
     - "brand_Toyota"
     - "Miles_Per_Year"
-    - "HP_per_Liter"
