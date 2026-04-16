@@ -39,7 +39,7 @@ feature_reduction:
   search_space:
     method: 
       type: "categorical"
-      choices: ["none", "pca"]        # kpca excluído: O(n³) na kernel matrix, inviável em 16K amostras
+      choices: ["none", "pca", "tsne"]        # kpca excluído: O(n³) inviável; lda: requer classificação
 
   rfe:
     n_features_to_select: 15
@@ -57,6 +57,30 @@ feature_reduction:
         type: "int"
         low: 5
         high: 25
+
+  tsne:
+    n_components: 2                # limitado a 3 (barnes_hut, O(n log n)); exact para >3 é muito lento
+    perplexity: 30.0              # controla influência de cada ponto (5-50)
+    learning_rate: "auto"         # auto | valor numérico (200)
+    n_iter: 1000                   # iterações de otimização
+    max_samples_for_tuning: 5000   # subsample para viabilizar nos trials (t-SNE é O(n²) ou pior)
+    search_space:
+      n_components:
+        type: "int"
+        low: 2
+        high: 3                    # limitado a 3 para usar barnes_hut rápido
+      perplexity:
+        type: "float"
+        low: 5.0
+        high: 50.0
+      learning_rate:
+        type: "float"
+        low: 10.0
+        high: 1000.0
+      n_iter:
+        type: "int"
+        low: 500
+        high: 2000
 
   kpca:
     n_components: 15
@@ -119,22 +143,22 @@ optimizer:
   strategy: "optuna"              # optuna | grid_search | randomized_search
 
   optuna:
-    default_trials: 25
+    default_trials: 30            # trials por modelo (↑ de 25 para melhor exploração)
     sampler: "tpe"                # tpe | random | cmaes
 
   grid_search: {}                 # sem config extra — usa search_space diretamente
 
   randomized_search:
-    n_iter: 50                    # número de combinações aleatórias a amostrar
+    n_iter: 50                    # número de combinações aleatórias a amostrar                 # número de combinações aleatórias a amostrar
 
 # ── Métricas ──────────────────────────────────────────────────────────────────
 # primary: usada para selecionar o melhor modelo e direcionar o Optuna
 # additional: registradas no MLFlow mas não usadas para seleção
 metrics:
-  primary: "r2"                   # rmse | mae | r2
+  primary: "rmse"                   # rmse | mae | r2
   additional:
-    - "mae"
     - "r2"
+    - "mae"
     - "mape"
 
 # ── Modelos ───────────────────────────────────────────────────────────────────
@@ -149,6 +173,21 @@ metrics:
 #   float      → suggest_float(low, high)              — subsample, frações
 #   int        → suggest_int(low, high)                — n_estimators, profundidade
 #   categorical→ suggest_categorical(choices)          — kernel, weights, etc.
+#
+# ── SELEÇÃO PARA REGRESSÃO ────────────────────────────────────────────────────
+# Modelos ativos: aqueles com melhor desempenho + velocidade em regressão contínua
+#   ✅ LinearRegression — baseline rápido
+#   ✅ Ridge — regularização linear robusta
+#   ✅ RandomForest — ensemble baseline
+#   ✅ GradientBoosting — boosting clássico
+#   ✅ XGBoost — boosting otimizado
+#   ✅ LightGBM — boosting com histogramas (mais rápido)
+#
+# Modelos desativados (prioridade menor para regressão):
+#   ❌ Lasso — redundante com Ridge; convergência mais lenta
+#   ❌ DecisionTree — inferior ao RandomForest
+#   ❌ KNN — menos efetivo que Boosting; sensível a escala/outliers
+#   ❌ SVR — O(n²) — inviável para 16K amostras
 
 models:
 
@@ -160,7 +199,7 @@ models:
     default_params: {}              # sem search_space → apenas baseline
 
   ridge:
-    enabled: false
+    enabled: true                  # Regularização linear — melhor que LinearRegression
     module: "sklearn.linear_model"
     class: "Ridge"
     default_params:
@@ -172,7 +211,7 @@ models:
         high: 1.0e4
 
   lasso:
-    enabled: false
+    enabled: false                 # Priorizar Ridge (menos hiperparâmetros, melhor convergência)
     module: "sklearn.linear_model"
     class: "Lasso"
     default_params:
@@ -188,7 +227,7 @@ models:
   # max_depth controla profundidade máxima (sem limite = risco de overfitting).
   # min_samples_split e min_samples_leaf regularizam a divisão dos nós.
   decision_tree:
-    enabled: false
+    enabled: false                 # Inferior ao Random Forest para regressão
     module: "sklearn.tree"
     class: "DecisionTreeRegressor"
     default_params:
@@ -215,7 +254,7 @@ models:
   # n_neighbors é o hiperparâmetro mais importante.
   # metric=minkowski + p=2 equivale à distância euclidiana.
   knn:
-    enabled: true
+    enabled: false                 # Menos efetivo que Boosting ; sensível a escala e outliers
     module: "sklearn.neighbors"
     class: "KNeighborsRegressor"
     default_params:
@@ -244,7 +283,7 @@ models:
   # C: inverso da regularização (C alto = menos regularização = mais flexível)
   # epsilon: margem de insensibilidade (erros < epsilon são ignorados)
   svr:
-    enabled: false
+    enabled: false                 # O(n²) — muito lento para 16K amostras
     module: "sklearn.svm"
     class: "SVR"
     default_params:

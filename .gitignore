@@ -1,4 +1,4 @@
 secrets.env
 outputs/
 mlruns/
-mlruns.db
+mlruns.*

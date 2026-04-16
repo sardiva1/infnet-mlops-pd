@@ -1,13 +1,19 @@
 """
 modeling/reducer.py — Transformador sklearn-compatível para redução de features.
 
-Suporta quatro estratégias configuráveis via config/modeling.yaml
+Suporta cinco estratégias configuráveis via config/modeling.yaml
 (seção feature_reduction):
 
     none   → passthrough (sem redução)
     rfe    → Eliminação Recursiva de Features (supervisionada, k tunável)
     pca    → Análise de Componentes Principais (linear, não supervisionada)
     kpca   → Kernel PCA (não-linear; suporta rbf, poly, cosine)
+    tsne   → t-Distributed Stochastic Neighbor Embedding (wrapper com fit+transform)
+
+⚠️  Observações:
+    • t-SNE: usa wrapper customizado (TSNEWrapper) que faz refit em transform().
+      Mais lento (O(n²)) mas compatível com sklearn Pipeline.
+      Limitado a n_components <= 3 com barnes_hut (method=exact para >3, ainda mais lento).
 
 Princípios de design:
     • Herda BaseEstimator + TransformerMixin para compatibilidade total com sklearn:
@@ -29,6 +35,7 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin, clone
 from sklearn.decomposition import PCA, KernelPCA
+from sklearn.manifold import TSNE
 from sklearn.feature_selection import RFE
 from sklearn.linear_model import Ridge
 from sklearn.ensemble import RandomForestRegressor
@@ -61,6 +68,70 @@ def _resolver_estimador_rfe(spec: Any) -> Any:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# TSNEWrapper — Compatibilidade com sklearn Pipeline
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TSNEWrapper(BaseEstimator, TransformerMixin):
+    """
+    Wrapper para t-SNE que implementa fit() + transform() para compatibilidade
+    com sklearn Pipeline e CrossValidation.
+
+    Estratégia:
+      • fit(): aplica fit_transform() e armazena X transformado
+      • transform(): refita t-SNE com novos dados (iterativo, pode ser lento)
+    
+    ⚠️  Limitações:
+      • t-SNE é estocástico — resultados variam mesmo com seed fixo
+      • transform() refit é custoso computacionalmente (O(n²) ou pior)
+      • Melhor para CV onde dados similares (não idealmente para holdout)
+    """
+    
+    def __init__(
+        self,
+        n_components: int = 2,
+        perplexity: float = 30.0,
+        learning_rate: float | str = 'auto',
+        max_iter: int = 1000,
+        method: str = 'barnes_hut',
+        random_state: int | None = None,
+    ):
+        self.n_components = n_components
+        self.perplexity = perplexity
+        self.learning_rate = learning_rate
+        self.max_iter = max_iter
+        self.method = method
+        self.random_state = random_state
+        self.tsne_model_ = None
+        self.X_train_transformed_ = None
+
+    def fit(self, X, y=None):
+        """Fit t-SNE em X (interno: fit_transform)."""
+        self.tsne_model_ = TSNE(
+            n_components=self.n_components,
+            perplexity=self.perplexity,
+            learning_rate=self.learning_rate,
+            max_iter=self.max_iter,
+            method=self.method,
+            random_state=self.random_state,
+        )
+        X_arr = X.values if isinstance(X, pd.DataFrame) else X
+        self.X_train_transformed_ = self.tsne_model_.fit_transform(X_arr)
+        return self
+
+    def transform(self, X):
+        """
+        Transforma X usando t-SNE.
+        Estratégia: refit com novos dados (iterativo, pode ser lento).
+        """
+        if self.tsne_model_ is None:
+            raise RuntimeError("TSNEWrapper não foi ajustado. Chame fit() antes de transform().")
+        X_arr = X.values if isinstance(X, pd.DataFrame) else X
+        # Refit com novos dados
+        X_transformed = self.tsne_model_.fit_transform(X_arr)
+        return X_transformed
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # FeatureReducer
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -71,7 +142,7 @@ class FeatureReducer(BaseEstimator, TransformerMixin):
     Parâmetros
     ----------
     method : str
-        Estratégia de redução: 'none' | 'rfe' | 'pca' | 'kpca'.
+        Estratégia de redução: 'none' | 'rfe' | 'pca' | 'kpca' | 'tsne'.
         Padrão 'none' (identidade — sem redução).
 
     n_features_to_select : int
@@ -101,6 +172,21 @@ class FeatureReducer(BaseEstimator, TransformerMixin):
         [Somente kPCA] Termo independente para kernels 'poly' e 'sigmoid'.
         Padrão 1.0.
 
+    perplexity : float
+        [Somente t-SNE] Equilíbrio entre estrutura local e global (5-50).
+        Padrão 30.0.
+
+    learning_rate : float ou str
+        [Somente t-SNE] Taxa de aprendizado. 'auto' deixa sklearn escolher,
+        ou valor numérico (ex: 200.0). Padrão 'auto'.
+
+    n_iter : int
+        [Somente t-SNE] Número máximo de iterações. Padrão 1000.
+
+    max_samples_for_tuning : int ou None
+        [Somente t-SNE] Subsample durante tuning do Optuna (viabilidade computacional).
+        None = usar todos os dados. Padrão None.
+
     logger : logging.Logger ou None
         Logger opcional para mensagens diagnósticas.
 
@@ -124,6 +210,10 @@ class FeatureReducer(BaseEstimator, TransformerMixin):
         gamma: float | None = None,
         degree: int = 3,
         coef0: float = 1.0,
+        perplexity: float = 30.0,
+        learning_rate: float | str = 'auto',
+        n_iter: int = 1000,
+        max_samples_for_tuning: int | None = None,
         logger: Any = None,
     ) -> None:
         self.method = method
@@ -134,6 +224,10 @@ class FeatureReducer(BaseEstimator, TransformerMixin):
         self.gamma = gamma
         self.degree = degree
         self.coef0 = coef0
+        self.perplexity = perplexity
+        self.learning_rate = learning_rate
+        self.n_iter = n_iter
+        self.max_samples_for_tuning = max_samples_for_tuning
         self.logger = logger
 
     # ── Helpers internos ──────────────────────────────────────────────────────
@@ -163,9 +257,21 @@ class FeatureReducer(BaseEstimator, TransformerMixin):
                 degree=self.degree,
                 coef0=self.coef0,
             )
+        if self.method == 'tsne':
+            # t-SNE com barnes_hut (padrão) é limitado a n_components <= 3
+            method_tsne = 'exact' if self.n_components > 3 else 'barnes_hut'
+            lr = self.learning_rate if isinstance(self.learning_rate, str) else float(self.learning_rate)
+            return TSNEWrapper(
+                n_components=self.n_components,
+                perplexity=self.perplexity,
+                learning_rate=lr,
+                max_iter=self.n_iter,
+                method=method_tsne,
+                random_state=42,
+            )
         raise ValueError(
             f"FeatureReducer: method='{self.method}' desconhecido. "
-            "Opções válidas: 'none', 'rfe', 'pca', 'kpca'."
+            "Opções válidas: 'none', 'rfe', 'pca', 'kpca', 'tsne'."
         )
 
     # ── API sklearn ───────────────────────────────────────────────────────────
@@ -189,13 +295,26 @@ class FeatureReducer(BaseEstimator, TransformerMixin):
         # Limita n_components ao intervalo válido antes de construir o redutor.
         # O Optuna pode sugerir valores maiores que n_features; o sklearn levantaria
         # ValueError se n_components >= min(n_amostras, n_features).
-        if self.method in ('pca', 'kpca'):
+        if self.method in ('pca', 'kpca', 'tsne'):
             n_features = X.shape[1]
             if self.n_components >= n_features:
                 self.n_components = n_features - 1
                 self._logar(
                     "FeatureReducer.fit: n_components limitado a %d (< n_features=%d).",
                     self.n_components, n_features,
+                )
+        
+        # Subsample para t-SNE durante tuning (viabilidade computacional)
+        if self.method == 'tsne' and self.max_samples_for_tuning is not None:
+            n_samples = X.shape[0]
+            if n_samples > self.max_samples_for_tuning:
+                idx = np.random.RandomState(42).choice(
+                    n_samples, self.max_samples_for_tuning, replace=False
+                )
+                X = X[idx] if isinstance(X, np.ndarray) else X.iloc[idx]
+                self._logar(
+                    "FeatureReducer.fit: t-SNE subsampled de %d → %d amostras para tuning.",
+                    n_samples, self.max_samples_for_tuning,
                 )
 
         self.reducer_ = self._construir_redutor_interno()
@@ -227,17 +346,21 @@ class FeatureReducer(BaseEstimator, TransformerMixin):
                 self.feature_names_out_,
             )
 
-        elif self.method in ('pca', 'kpca'):
+        elif self.method in ('pca', 'kpca', 'tsne'):
             self.reducer_.fit(X)
             n_out = self.n_components
             self.feature_names_out_ = [f'pc_{i}' for i in range(n_out)]
             variancia_explicada = None
             if self.method == 'pca' and hasattr(self.reducer_, 'explained_variance_ratio_'):
                 variancia_explicada = float(self.reducer_.explained_variance_ratio_.sum())
+            metodo_extra = ''
+            if self.method == 'tsne' and self.n_components > 3:
+                metodo_extra = f' (method=exact — mais lento que barnes_hut)'
             self._logar(
-                "FeatureReducer.fit: %s ajustado → %d componentes%s.",
+                "FeatureReducer.fit: %s ajustado → %d componentes%s%s.",
                 self.method.upper(), n_out,
                 f' (variância explicada: {variancia_explicada:.3f})' if variancia_explicada is not None else '',
+                metodo_extra,
             )
 
         return self
